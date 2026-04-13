@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 from torch import nn
+from videomt import DEVICE
 from torch.amp import autocast
 
 from detectron2.projects.point_rend.point_features import point_sample
@@ -137,7 +138,7 @@ class VideoHungarianMatcher(nn.Module):
                 align_corners=False,
             ).flatten(1)
 
-            with autocast('cuda',enabled=False):
+            with autocast(DEVICE, enabled=False):
                 out_mask = out_mask.float()
                 tgt_mask = tgt_mask.float()
                 # Compute the focal loss between masks
@@ -271,7 +272,7 @@ class VideoHungarianMatcher_Consistent(VideoHungarianMatcher):
                     align_corners=False,
                 ).flatten(1)
 
-                with autocast('cuda',enabled=False):
+                with autocast(DEVICE, enabled=False):
                     out_mask = out_mask.float()
                     tgt_mask = tgt_mask.float()
                     # Compute the focal loss between masks
