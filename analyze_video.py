@@ -83,15 +83,8 @@ def main():
 
     estimated_frames = (num_frames + args.sample_rate - 1) // args.sample_rate
 
-    print(f"VideoMT Analyzer, version 2.2. Recent change: logic reworked to rationalize; pip install missing bits.")
-    print(f"Processing video: {args.input_video}")
-    print(f"Resolution: {width}x{height}")
-    print(f"Original: {num_frames} frames @ {orig_fps:.2f} FPS")
-    print(f"Sampling every {args.sample_rate}th frame")
-    print(f"Estimated processed frames: {estimated_frames}")
-    print(f"Effective output FPS: {output_fps:.2f}")
-    print(f"Device: {DEVICE}")
-
+    print(f"VideoMT Analyzer, version 2.3. Recent change: logic reworked to rationalize; pip install tips; hf download tip.")
+    
 
     print(f"If needed:")
     print(f"pip install --user -r requirements.txt") 
@@ -103,6 +96,16 @@ def main():
     print(f"pip install torchvision==0.24.1")                                                                                                 
 
     print(f"")
+    print(f"Tip: Use better weights if GPU: 'hf download tue-mps/VidEoMT vipseg_vit_large_55.2.pth --local-dir weights/', then: '--config-file configs/VIPSeg/videomt/vit-large/videomt_Online_ViTL.yaml --weights weights/vipseg_vit_large_55.2.pth ' ")
+    print(f"")    
+    print(f"Processing video: {args.input_video}")
+    print(f"Resolution: {width}x{height}")
+    print(f"Original: {num_frames} frames @ {orig_fps:.2f} FPS")
+    print(f"Sampling every {args.sample_rate}th frame")
+    print(f"Estimated processed frames: {estimated_frames}")
+    print(f"Effective output FPS: {output_fps:.2f}")
+    print(f"Device: {DEVICE}")
+ 
 
 
     fps = cap.get(cv2.CAP_PROP_FPS)
