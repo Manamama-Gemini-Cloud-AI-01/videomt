@@ -14,6 +14,7 @@ from detectron2.config import get_cfg
 from detectron2.projects.deeplab import add_deeplab_config
 from detectron2.utils.logger import setup_logger
 from visualization.predictor import VisualizationDemo_windows
+from huggingface_hub import hf_hub_download
 
 
 def setup_cfg(args):
@@ -28,6 +29,19 @@ def setup_cfg(args):
     weights_path = args.weights
     if not os.path.isabs(weights_path):
         weights_path = os.path.join(sys.path[0], weights_path)
+
+    # Auto-download if weight file is missing
+    if not os.path.exists(weights_path):
+        print(f"Weights not found at {weights_path}. Attempting to download from Hugging Face...")
+        repo_id = "tue-mps/VidEoMT"
+        filename = os.path.basename(weights_path)
+        try:
+            downloaded_path = hf_hub_download(repo_id=repo_id, filename=filename, local_dir=os.path.dirname(weights_path))
+            print(f"Successfully downloaded weights to {downloaded_path}")
+            weights_path = downloaded_path
+        except Exception as e:
+            print(f"Error downloading weights: {e}")
+            sys.exit(1)
 
     cfg.merge_from_file(config_path)
     cfg.merge_from_list(["MODEL.WEIGHTS", weights_path] + args.opts)
