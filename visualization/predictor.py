@@ -15,6 +15,7 @@ from detectron2.structures import Instances
 from detectron2.utils.video_visualizer import VideoVisualizer
 from detectron2.utils.visualizer import ColorMode
 from detectron2.modeling import build_model
+from detectron2.checkpoint import DetectionCheckpointer
 import detectron2.data.transforms as T
 import numpy as np
 
@@ -209,10 +210,7 @@ class VideoPredictor(DefaultPredictor):
         if len(cfg.DATASETS.TEST):
             self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
 
-        weight = torch.load(cfg.MODEL.WEIGHTS)
-        if 'model' in weight.keys():
-            weight = weight['model']
-        self.model.load_state_dict(weight, strict=False)
+        DetectionCheckpointer(self.model).load(cfg.MODEL.WEIGHTS)
 
         self.aug = T.ResizeShortestEdge(
             [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
