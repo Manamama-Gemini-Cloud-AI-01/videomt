@@ -6,6 +6,7 @@ import tqdm
 import sys
 import numpy as np
 
+
 sys.path.insert(1, os.path.join(sys.path[0], '.'))
 sys.path.insert(1, os.path.join(sys.path[0], 'visualization'))
 
@@ -82,7 +83,7 @@ def main():
 
     estimated_frames = (num_frames + args.sample_rate - 1) // args.sample_rate
 
-    print(f"VideoMT Analyzer, version 2.1. Recent change: decimation (sampling) logic reworked to rationalize.")
+    print(f"VideoMT Analyzer, version 2.2. Recent change: logic reworked to rationalize; pip install missing bits.")
     print(f"Processing video: {args.input_video}")
     print(f"Resolution: {width}x{height}")
     print(f"Original: {num_frames} frames @ {orig_fps:.2f} FPS")
@@ -90,6 +91,16 @@ def main():
     print(f"Estimated processed frames: {estimated_frames}")
     print(f"Effective output FPS: {output_fps:.2f}")
     print(f"Device: {DEVICE}")
+
+
+    print(f"If needed:")
+    print(f"pip install --user -r requirements.txt") 
+
+
+    print(f"pip install --user --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'")                                                              
+    print(f"pip install --user --no-build-isolation git+https://github.com/cocodataset/panopticapi.git")                                                                                                      
+
+    print(f"")
 
 
     fps = cap.get(cv2.CAP_PROP_FPS)
