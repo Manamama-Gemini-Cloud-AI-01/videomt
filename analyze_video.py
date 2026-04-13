@@ -99,7 +99,7 @@ def main():
 
     print(f"pip install --user --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'")                                                              
     print(f"pip install --user --no-build-isolation git+https://github.com/cocodataset/panopticapi.git")  
-    print(f"If: RuntimeError: operator torchvision::nms does not exist, then also:"  
+    print(f"If: RuntimeError: operator torchvision::nms does not exist, then also:")  
     print(f"pip install torchvision==0.24.1")                                                                                                 
 
     print(f"")
