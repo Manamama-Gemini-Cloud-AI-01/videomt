@@ -6,6 +6,9 @@
 
 # Copyright (c) Facebook, Inc. and its affiliates.
 
+import torch
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 # config
 from .config import add_videomt_config
 

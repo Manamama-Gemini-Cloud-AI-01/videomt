@@ -2,10 +2,16 @@ import argparse
 import logging
 import time
 import numpy as np
+import os
+import sys
 from collections import Counter
 import tqdm
 import torch
 import os
+
+# Add project root to path for imports
+if sys.path[0] not in sys.path:
+    sys.path.insert(1, os.path.join(sys.path[0], '.'))
 
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
@@ -37,11 +43,23 @@ logger = logging.getLogger("vps-analysis")
 def setup_cfg(args):
     cfg = get_cfg()
     add_videomt_config(cfg)
-    cfg.merge_from_file(args.config_file)
+    
+    # Resolve paths relative to project root (sys.path[0])
+    config_path = args.config_file
+    if not os.path.isabs(config_path):
+        config_path = os.path.join(sys.path[0], config_path)
+        
+    model_weights_path = args.model_weights
+    if not os.path.isabs(model_weights_path):
+        model_weights_path = os.path.join(sys.path[0], model_weights_path)
+
+    cfg.merge_from_file(config_path)
+    
     opts = list(args.opts)
     use_fused_qkv = bool(args.fused_qkv and args.model_type == "dinov3")
     opts += ["MODEL.BACKBONE.FUSED_QKV", str(use_fused_qkv)]
-    cfg.merge_from_list(["MODEL.WEIGHTS", args.model_weights] + opts)
+    
+    cfg.merge_from_list(["MODEL.WEIGHTS", model_weights_path] + opts)
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg.freeze()
     setup_logger()
