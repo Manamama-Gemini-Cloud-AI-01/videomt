@@ -1,3 +1,16 @@
+print(f"VideoMT Analyzer, version 2.3.1. Recent change: logic reworked to rationalize; pip install tips; hf download tip.")
+
+
+print(f"If needed:")
+print(f"pip install --user -r requirements.txt") 
+
+
+print(f"pip install --user --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'")                                                              
+print(f"pip install --user --no-build-isolation git+https://github.com/cocodataset/panopticapi.git")  
+print(f"If: RuntimeError: operator torchvision::nms does not exist, then also:")  
+print(f"pip install torchvision==0.24.1")                                               
+
+
 import argparse
 import cv2
 import os
@@ -5,6 +18,8 @@ import torch
 import tqdm
 import sys
 import numpy as np
+
+
 
 
 sys.path.insert(1, os.path.join(sys.path[0], '.'))
@@ -83,17 +98,7 @@ def main():
 
     estimated_frames = (num_frames + args.sample_rate - 1) // args.sample_rate
 
-    print(f"VideoMT Analyzer, version 2.3. Recent change: logic reworked to rationalize; pip install tips; hf download tip.")
-    
-
-    print(f"If needed:")
-    print(f"pip install --user -r requirements.txt") 
-
-
-    print(f"pip install --user --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'")                                                              
-    print(f"pip install --user --no-build-isolation git+https://github.com/cocodataset/panopticapi.git")  
-    print(f"If: RuntimeError: operator torchvision::nms does not exist, then also:")  
-    print(f"pip install torchvision==0.24.1")                                                                                                 
+                                                  
 
     print(f"")
     print(f"Tip: Use better weights if GPU: 'hf download tue-mps/VidEoMT vipseg_vit_large_55.2.pth --local-dir weights/', then: '--config-file configs/VIPSeg/videomt/vit-large/videomt_Online_ViTL.yaml --weights weights/vipseg_vit_large_55.2.pth ' ")

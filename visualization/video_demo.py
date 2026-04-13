@@ -28,8 +28,11 @@ from detectron2.data.detection_utils import read_image
 from detectron2.projects.deeplab import add_deeplab_config
 from detectron2.utils.logger import setup_logger
 
-from videomt import  add_videomt_config
+from videomt import add_videomt_config, DEVICE
 from predictor import VisualizationDemo, VisualizationDemo_windows
+from huggingface_hub import hf_hub_download
+import cv2
+import numpy as np
 
 
 def setup_cfg(args):
@@ -37,8 +40,27 @@ def setup_cfg(args):
 	cfg = get_cfg()
 	add_deeplab_config(cfg)
 	add_videomt_config(cfg)
+
+	weights_path = args.weights
+	if not os.path.isabs(weights_path):
+		weights_path = os.path.join(sys.path[0], "..", weights_path)
+
+	# Auto-download if weight file is missing
+	if not os.path.exists(weights_path):
+		print(f"Weights not found at {weights_path}. Attempting to download from Hugging Face...")
+		repo_id = "tue-mps/VidEoMT"
+		filename = os.path.basename(weights_path)
+		try:
+			downloaded_path = hf_hub_download(repo_id=repo_id, filename=filename, local_dir=os.path.dirname(weights_path))
+			print(f"Successfully downloaded weights to {downloaded_path}")
+			weights_path = downloaded_path
+		except Exception as e:
+			print(f"Error downloading weights: {e}")
+			sys.exit(1)
+
 	cfg.merge_from_file(args.config_file)
-	cfg.merge_from_list(args.opts)
+	cfg.merge_from_list(["MODEL.WEIGHTS", weights_path] + args.opts)
+	cfg.MODEL.DEVICE = DEVICE
 	cfg.freeze()
 	return cfg
 
@@ -46,9 +68,14 @@ def get_parser():
 	parser = argparse.ArgumentParser(description="maskformer2 demo for builtin configs")
 	parser.add_argument(
 		"--config-file",
-		default="configs/youtubevis_2019/video_maskformer2_R50_bs32_8ep_frame.yaml",
+		default="configs/ytvis19/videomt/vit-base/videomt_online_ViTB.yaml",
 		metavar="FILE",
 		help="path to config file",
+	)
+	parser.add_argument(
+		"--weights",
+		default="weights/yt_2019_vit_base_58.2.pth",
+		help="path to weights file",
 	)
 	parser.add_argument(
 		"--input",
@@ -98,44 +125,90 @@ if __name__ == "__main__":
 	score_threshold = args.confidence_threshold
 	windows_size = args.windows_size
 
-
-	os.makedirs(output_root, exist_ok=True)
-	
-	frames_path = video_root
-	frames_path = glob.glob(os.path.expanduser(os.path.join(frames_path, '*.???')))
-	frames_path.sort()
-	if windows_size == -1:
-		windows_size = len(frames_path)
 	start_time = time.time()
 	vid_frames = []
-	_frames_path = []
 	instances = set()
-	for i, path in enumerate(tqdm.tqdm(frames_path)):
-		img = read_image(path, format="BGR")
-		_frames_path.append(path)
-		vid_frames.append(img)
-		if len(vid_frames) == windows_size or i == len(frames_path) - 1:
-			# do inference
-			with torch.amp.autocast(device_type="cuda"):
-				if i < windows_size:
-					predictions, visualized_output = demo.run_on_video(vid_frames, keep=False)
-				else:
-					predictions, visualized_output = demo.run_on_video(vid_frames, keep=True)
-			# do save
-			for path, _vis_output in zip(_frames_path, visualized_output):
-				out_filename = os.path.join(output_root, os.path.basename(path))
-				_vis_output.save(out_filename)
+
+	if os.path.isdir(video_root):
+		os.makedirs(output_root, exist_ok=True)
+		frames_path = glob.glob(os.path.expanduser(os.path.join(video_root, '*.???')))
+		frames_path.sort()
+		if windows_size == -1:
+			windows_size = len(frames_path)
+		
+		_frames_path = []
+		for i, path in enumerate(tqdm.tqdm(frames_path)):
+			img = read_image(path, format="BGR")
+			_frames_path.append(path)
+			vid_frames.append(img)
+			if len(vid_frames) == windows_size or i == len(frames_path) - 1:
+				with torch.amp.autocast(device_type=DEVICE):
+					predictions, visualized_output = demo.run_on_video(vid_frames, keep=(i >= windows_size))
+				
+				for path, _vis_output in zip(_frames_path, visualized_output):
+					out_filename = os.path.join(output_root, os.path.basename(path))
+					_vis_output.save(out_filename)
+				
+				if 'pred_ids' in predictions.keys():
+					for id in predictions['pred_ids']:
+						instances.add(id)
+				vid_frames = []
+				_frames_path = []
+
+	else:
+		# Assume it's a video file
+		cap = cv2.VideoCapture(video_root)
+		width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+		height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+		fps = cap.get(cv2.CAP_PROP_FPS)
+		num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+		
+		out = cv2.VideoWriter(
+			output_root,
+			cv2.VideoWriter_fourcc(*'mp4v'),
+			fps,
+			(width, height)
+		)
+
+		pbar = tqdm.tqdm(total=num_frames)
+		frame_idx = 0
+		while cap.isOpened():
+			ret, frame = cap.read()
+			if not ret:
+				break
+			vid_frames.append(frame)
+			frame_idx += 1
+
+			if len(vid_frames) == windows_size:
+				with torch.amp.autocast(device_type=DEVICE):
+					predictions, visualized_output = demo.run_on_video(vid_frames, keep=(frame_idx > windows_size))
+				for vis in visualized_output:
+					vis_frame = cv2.cvtColor(np.array(vis.get_image()), cv2.COLOR_RGB2BGR)
+					out.write(vis_frame)
+				if 'pred_ids' in predictions.keys():
+					for id in predictions['pred_ids']:
+						instances.add(id)
+				pbar.update(len(vid_frames))
+				vid_frames = []
+
+		if len(vid_frames) > 0:
+			with torch.amp.autocast(device_type=DEVICE):
+				predictions, visualized_output = demo.run_on_video(vid_frames, keep=(frame_idx > windows_size))
+			for vis in visualized_output:
+				vis_frame = cv2.cvtColor(np.array(vis.get_image()), cv2.COLOR_RGB2BGR)
+				out.write(vis_frame)
 			if 'pred_ids' in predictions.keys():
 				for id in predictions['pred_ids']:
 					instances.add(id)
-			del visualized_output, vid_frames, _frames_path, predictions
-
-			vid_frames = []
-			_frames_path = []
+			pbar.update(len(vid_frames))
+		
+		cap.release()
+		out.release()
+		pbar.close()
 
 	logger.info(
-		"detected {} instances per frame in {:.2f}s".format(
-			len(set(instances)), time.time() - start_time
+		"detected {} instances in {:.2f}s".format(
+			len(instances), time.time() - start_time
 		)
 	)
 
